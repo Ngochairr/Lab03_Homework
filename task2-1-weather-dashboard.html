@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Weather Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .search-box {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .search-box input {
+            width: 70%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        .search-box button {
+            width: 28%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-left: 2%;
+        }
+        
+        .weather-card {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+        
+        .current-weather {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .temp-display {
+            font-size: 60px;
+            font-weight: bold;
+        }
+        
+        .forecast-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .forecast-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 18px;
+            color: white;
+        }
+        
+        .error {
+            background: #dc3545;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .recent-searches {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .recent-city {
+            padding: 5px 15px;
+            background: #e9ecef;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .recent-city:hover {
+            background: #dee2e6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 style="color: white; text-align: center; margin-bottom: 30px;">
+            Weather Dashboard
+        </h1>
+        
+        <div class="search-box">
+            <input type="text" id="cityInput" placeholder="Enter city name..." 
+                   onkeypress="if(event.key==='Enter') searchWeather()">
+            <button onclick="searchWeather()">Search</button>
+            <div class="recent-searches" id="recentSearches"></div>
+            <div id="recentDisplay"></div>
+        </div>
+        
+        <div id="errorMessage"></div>
+        <div id="weatherDisplay"></div>
+        <div id="forecastDisplay"></div>
+    </div>
+
+    <script>
+        const API_KEY = '46d8b437a46cc05d95e5cfccf9e1d56a'; // Get from openweathermap.org
+        const weatherIcons = {
+            Clear: '??',
+            Clouds: '??',
+            Rain: '???',
+            Snow: '??'
+        };
+        const cities = ["New York", "Paris", "Tokyo"];
+        localStorage.setItem("recentCities", JSON.stringify(cities));
+        const storedCities = JSON.parse(localStorage.getItem("recentCities"));
+ 
+
+        // TODO: Implement functions
+        const city = cityinput;
+
+        async function fetchWeather(city) {
+           const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${API_KEY}&units=metric`;
+           const response = await fetch(url);
+            const data = await response.json();
+            if (data.cod !== 200) {
+                throw new Error(data.message || "Error 404");
+            }
+            return data;
+        }
+        
+        async function fetchForecast(city) {
+            const data = await fetchWeather(city);
+            const {lat, lon} = data.coord;
+            const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`;
+            const response = await fetch(url);
+            const weatherdata = await response.json();
+           return weatherdata;
+        }
+        
+        function displayWeather(data) {
+            const temperature = data.main.temp;
+            const description = data.weather[0].description;
+            const humidity = data.main.humidity;
+            const windSpeed = data.wind.speed;
+            const country = data.sys.country;
+            const weatherMain = data.weather[0].main;
+            const icon = weatherIcons[weatherMain];
+
+            const html = `
+                <div class="weather-card">
+                    <div class="current-weather">
+                    <div>
+                        <p>${data.name}, ${data.sys.country}<p> <br> 
+                        <p>${description} ${icon}</p> <br>
+                        <p>${temperature}°C</p> <br> <br>
+                        <p>Humidity: ${humidity}%     Wind: ${windSpeed}km/h</p>
+                    </div>
+                    </div>
+                </div>
+             `;
+            document.getElementById("weatherDisplay").innerHTML = html;
+        }
+        
+        function displayForecast(data) {
+            const forecastHTML = [];
+            for (let i = 0; i < data.list.length && forecastHTML.length < 5; i += 8) {
+                const day = data.list[i];
+                const date = new Date(day.dt_txt);
+                const weekday = date.toLocaleDateString(undefined, { weekday: 'long' });
+                const weatherMain = day.weather[0].main;
+                const icon = weatherIcons[weatherMain];
+
+                forecastHTML.push(`
+                <div class="forecast-item">
+                    <p>${weekday}</p>
+                    <p>${icon}</p>
+                    <p>${day.main.temp.toFixed(1)}°C</p>
+                </div>
+                `);
+            }
+
+            document.getElementById("forecastDisplay").innerHTML = `
+                <div class="weather-card">
+                <p>5-Day Forecast<p><hr>
+                <div class="forecast-grid">${forecastHTML.join('')}</div>
+                </div>
+            `;
+        }
+        
+        async function searchWeather() {
+            const city = document.getElementById("cityInput").value.trim();
+            saveRecentSearch(city);
+            if (!city) return showError("Please enter a city name.");
+
+            clearError();
+            document.getElementById("weatherDisplay").innerHTML = '<div class="loading">Loading...</div>';
+            document.getElementById("forecastDisplay").innerHTML = '';
+
+            try {
+                const weatherData = await fetchWeather(city); // throws error if city invalid
+                displayWeather(weatherData);
+                displayForecast(await fetchForecast(city));
+                saveRecentSearch(city); // save only if city is valid
+            } catch (err) {
+                showError("Error 404: City not found");
+                document.getElementById("weatherDisplay").innerHTML = '';
+                document.getElementById("forecastDisplay").innerHTML = '';
+            }
+        }
+        
+        function saveRecentSearch(city) {
+            if (!city) return;
+
+            let cities = JSON.parse(localStorage.getItem("recentCities")) || [];
+
+            cities = cities.filter(c => c.toLowerCase() !== city.toLowerCase());
+
+            cities.unshift(city);
+
+            cities = cities.slice(0, 3);
+
+            localStorage.setItem("recentCities", JSON.stringify(cities));
+
+            loadRecentSearches();
+        }
+
+        function loadRecentSearches() {
+            const cities = JSON.parse(localStorage.getItem("recentCities")) || [];
+            document.getElementById("recentDisplay").innerHTML = `
+                <div class="cities">
+                    <p>Recent: ${cities.join(" | ")}</p>
+                    <hr>
+                </div>
+            `;
+        }
+                    
+        function showError(message) {
+            document.getElementById("errorMessage").innerHTML = `<div class="error">${message}</div>`;
+        }
+        
+        function clearError() {
+            document.getElementById("errorMessage").innerHTML = '';
+        }
+        
+        // Initialize
+        loadRecentSearches();
+    </script>
+</body>
+</html>
